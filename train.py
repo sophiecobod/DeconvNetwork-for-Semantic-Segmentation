@@ -2,34 +2,23 @@ import torch
 import torch.nn as nn 
 import os 
 import numpy as np
-import torch.utils.data import Dataset, DataLoader
+from load_dataset import load_dataset
+from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from model import conv_deconv 
+import time
 
-class ImageDataset(Dataset):
+if __name__ == "__main__":
+    pass
   
-  
-  
-train_dataset=ImageDataset(input_dir="input",output_dir="output") #Training Dataset
-test_dataset=ImageDataset(input_dir="input",output_dir="output",train=False) #Testing Dataset
-batch_size = 10 #mini-batch size
-n_iters = 10000 #total iterations
-num_epochs = n_iters / (len(train_dataset) / batch_size)
-num_epochs = int(num_epochs)
-
-train_loader = torch.utils.data.DataLoader(dataset=train_dataset, 
-                                           batch_size=batch_size, 
-                                           shuffle=True)
-
-test_loader = torch.utils.data.DataLoader(dataset=test_dataset, 
-                                          batch_size=batch_size, 
-                                          shuffle=False)
-  
- 
 model = conv_deconv()
 
 iter=0
-iter_new=0 
+iter_new=0
+
+if not os.path.exists("checkpoints"):
+    os.makedirs("checkpoints")
+
 check=os.listdir("checkpoints") #checking if checkpoints exist to resume training
 if len(check):
     check.sort(key=lambda x:int((x.split('_')[2]).split('.')[0]))
@@ -53,9 +42,27 @@ optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
 beg=time.time() #time at the beginning of training
 print("Training Started!")
+
+num_epochs = 5
+train_loader = load_dataset("./data", "train")
+
+
 for epoch in range(num_epochs):
     print("\nEPOCH " +str(epoch+1)+" of "+str(num_epochs)+"\n")
-    for i,datapoint in enumerate(train_loader):
+    for i, batch in enumerate(train_loader):
+        inputs, labels = batch
+        print(inputs.shape)
+        print(labels.shape)
+
+        output = model(inputs)
+        print(output.shape)
+        exit()
+        # Regarder structure de batch -> input
+        # forward input dans le NN (output = model(input))
+        # Calcul de la loss ? (a definir) : (loss = compute_loss(output, GT))
+        # backward -> optimizer etc
+
+        """
         datapoint['input_image']=datapoint['input_image'].type(torch.FloatTensor) #typecasting to FloatTensor as it is compatible with CUDA
         datapoint['output_image']=datapoint['output_image'].type(torch.FloatTensor)
         if torch.cuda.is_available(): #move to gpu if available
@@ -100,3 +107,4 @@ for epoch in range(num_epochs):
         if iter % 500 ==0:
             torch.save(model,'checkpoints/model_iter_'+str(iter)+'.pt')
             print("model saved at iteration : "+str(iter))
+    """
