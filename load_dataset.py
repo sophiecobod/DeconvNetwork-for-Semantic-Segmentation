@@ -2,6 +2,7 @@ import torch
 import torchvision
 import torchvision.datasets
 import torchvision.transforms as transforms 
+import voc
 
 def load_dataset(datapath, dataset_choice):
 
@@ -9,7 +10,7 @@ def load_dataset(datapath, dataset_choice):
         [transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-    dataset = torchvision.datasets.VOCSegmentation(root=datapath, year='2012', image_set=dataset_choice,
+    dataset = voc.VOCSegmentation(root=datapath, year='2012', image_set=dataset_choice,
                                                     download=True, transform = transform)
     
     loader = torch.utils.data.DataLoader(dataset, batch_size=4,
