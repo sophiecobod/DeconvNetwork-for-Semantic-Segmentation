@@ -211,25 +211,41 @@ class conv_deconv(nn.Module):
 #import the weights of VGG16 to do transfer learning (source : dataflowr notebook)
 if __name__ == "__main__":
 
-    pass
-    """
-    def init_weight(self,w):
-        i=0
-        for idx, m in enumerate(self.children()):
-            for idy, msub in enumerate(m.children()):
-                classname = msub.__class__.__name__
-                if classname.find('Conv') != -1:
-                    msub.weight.data = w['features.'+str(i)+'.weight']#.clone()
-                    msub.bias.data = w['features.'+str(i)+'.bias']#.clone()
-                    print(msub,'features.'+str(i))
-                if classname.find('Linear') != -1:
-                    msub.weight.data = w['classifier.'+str(i-31)+'.weight']#.clone()
-                    msub.bias.data = w['classifier.'+str(i-31)+'.bias']#.clone()
-                    print(msub,'classifier.'+str(i-31))
-                i +=1
-    
     model = conv_deconv()
-    weights = model_zoo.load_url('https://download.pytorch.org/models/vgg16-397923af.pth')
-    model.init_weight(weights)
-    
-    print(model) """
+    w = model_zoo.load_url('https://download.pytorch.org/models/vgg16-397923af.pth')
+
+    for (name, child) in model.convblock1.named_children():
+        if name == '0':
+            print(child)
+            child.weight.data = w['features.0.weight']
+            child.bias.data = w['features.0.weight']
+
+
+"""
+Pour la suite:
+- regarder comment sont mis en place les poids dans vgg
+- les mettres sur chaque couches
+- tester que les poids ont bien changée etc
+
+- Initiliser gaussien les autres poids
+
+"""
+    """
+    i = 0
+    for block in model.children():
+        for idy, msub in enumerate(m.children()):
+            classname = msub.__class__.__name__
+            print(classname)
+            continue
+            if classname.find('Conv') != -1:
+                msub.weight.data = w['features.'+str(i)+'.weight']#.clone()
+                msub.bias.data = w['features.'+str(i)+'.bias']#.clone()
+                print(msub,'features.'+str(i))
+            i +=1
+
+"""
+
+"""
+
+layers = ['features.0.weight', 'features.0.bias', 'features.2.weight', 'features.2.bias', 'features.5.weight', 'features.5.bias', 'features.7.weight', 'features.7.bias', 'features.10.weight', 'features.10.bias', 'features.12.weight', 'features.12.bias', 'features.14.weight', 'features.14.bias', 'features.17.weight', 'features.17.bias', 'features.19.weight', 'features.19.bias', 'features.21.weight', 'features.21.bias', 'features.24.weight', 'features.24.bias', 'features.26.weight', 'features.26.bias', 'features.28.weight', 'features.28.bias', 'classifier.0.weight', 'classifier.0.bias', 'classifier.3.weight', 'classifier.3.bias', 'classifier.6.weight', 'classifier.6.bias']
+"""
