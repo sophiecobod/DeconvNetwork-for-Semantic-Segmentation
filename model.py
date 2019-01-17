@@ -206,46 +206,48 @@ class conv_deconv(nn.Module):
     
         return x
 
+def create_model():
+    model = conv_deconv()
+    w = model_zoo.load_url('https://download.pytorch.org/models/vgg16-397923af.pth')
+
+    def init_vgg_weights_block(block, name_list, verbose=False):
+        i = 0
+        for (name, child) in block.named_children():
+                classname = child.__class__.__name__
+                if classname.find('Conv') != -1:
+                    feat_name = 'features.'+name_list[i]+'.weight'
+                    bias_name = 'features.'+name_list[i]+'.bias'
+
+                    child.weight.data = w[feat_name]
+                    child.bias.data = w[bias_name]
+                    if verbose:
+                        print(feat_name + " and " + bias_name + " initialized.")
+
+                    i += 1
+
+    def init_gaussian_weights(model, verbose=False):
+        for block in model.children():
+            for msub in block.children():
+                classname = msub.__class__.__name__
+                if classname.find('ConvTranspose') != -1:
+                    msub.weight.data.normal_(0, 0.01)
+                    msub.bias.data.fill_(0)
+                    if verbose:
+                        print(classname + " initialized.")
+
+
+    init_vgg_weights_block(model.convblock1,["0", "2"])
+    init_vgg_weights_block(model.convblock2,["5", "7"])
+    init_vgg_weights_block(model.convblock3,["10", "12", "14"])
+    init_vgg_weights_block(model.convblock4,["17", "19", "21"])
+    init_vgg_weights_block(model.convblock5,["24", "26", "28"])
+
+    init_gaussian_weights(model)
+
+    return model
+
 # to do some experiment
 # to do some experiment
 #import the weights of VGG16 to do transfer learning (source : dataflowr notebook)
 if __name__ == "__main__":
-
-    model = conv_deconv()
-    w = model_zoo.load_url('https://download.pytorch.org/models/vgg16-397923af.pth')
-
-    for (name, child) in model.convblock1.named_children():
-        if name == '0':
-            print(child)
-            child.weight.data = w['features.0.weight']
-            child.bias.data = w['features.0.weight']
-
-
-"""
-Pour la suite:
-- regarder comment sont mis en place les poids dans vgg
-- les mettres sur chaque couches
-- tester que les poids ont bien changée etc
-
-- Initiliser gaussien les autres poids
-
-"""
-    """
-    i = 0
-    for block in model.children():
-        for idy, msub in enumerate(m.children()):
-            classname = msub.__class__.__name__
-            print(classname)
-            continue
-            if classname.find('Conv') != -1:
-                msub.weight.data = w['features.'+str(i)+'.weight']#.clone()
-                msub.bias.data = w['features.'+str(i)+'.bias']#.clone()
-                print(msub,'features.'+str(i))
-            i +=1
-
-"""
-
-"""
-
-layers = ['features.0.weight', 'features.0.bias', 'features.2.weight', 'features.2.bias', 'features.5.weight', 'features.5.bias', 'features.7.weight', 'features.7.bias', 'features.10.weight', 'features.10.bias', 'features.12.weight', 'features.12.bias', 'features.14.weight', 'features.14.bias', 'features.17.weight', 'features.17.bias', 'features.19.weight', 'features.19.bias', 'features.21.weight', 'features.21.bias', 'features.24.weight', 'features.24.bias', 'features.26.weight', 'features.26.bias', 'features.28.weight', 'features.28.bias', 'classifier.0.weight', 'classifier.0.bias', 'classifier.3.weight', 'classifier.3.bias', 'classifier.6.weight', 'classifier.6.bias']
-"""
+    pass
