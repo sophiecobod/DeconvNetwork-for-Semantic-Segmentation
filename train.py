@@ -5,106 +5,123 @@ import numpy as np
 from load_dataset import load_dataset
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
-from model import conv_deconv 
+from model import create_model 
 import time
 
+
+def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
+    since = time.time()
+
+    #val_acc_history = []
+
+    #best_model_wts = copy.deepcopy(model.state_dict())
+    #best_acc = 0.0
+
+    for epoch in range(num_epochs):
+        print('Epoch {}/{}'.format(epoch, num_epochs - 1))
+        print('-' * 10)
+
+        # Each epoch has a training and validation phase
+        for phase in ['train', 'val']:
+            if phase == 'train':
+                model.train()  # Set model to training mode
+            else:
+                model.eval()   # Set model to evaluate mode
+
+            running_loss = 0.0
+            #running_corrects = 0
+
+            # Iterate over data.
+            for inputs, labels in dataloaders[phase]:
+                #inputs = inputs.to(device)
+                #labels = labels.to(device)
+
+                # zero the parameter gradients
+                optimizer.zero_grad()
+
+                # forward
+                # track history if only in train
+                with torch.set_grad_enabled(phase == 'train'):
+                    outputs = model(inputs)
+                    outputs = torch.clamp(outputs, 0, 1)
+                    loss = criterion(outputs, labels)
+                    print(loss)
+                    ## TODO _, preds = torch.max(outputs, 1)
+
+                    # backward + optimize only if in training phase
+                    if phase == 'train':
+                        loss.backward()
+                        optimizer.step()
+
+                # statistics
+                running_loss += loss.item() * inputs.size(0)
+                ## TODO running_corrects += torch.sum(preds == labels.data)
+
+            epoch_loss = running_loss / len(dataloaders[phase].dataset)
+            ## TODO epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+
+            ## TODO print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
+            print('{} Loss: {:.4f}'.format(phase, epoch_loss))
+
+            # deep copy the model
+            #if phase == 'val' and epoch_acc > best_acc:
+            #    best_acc = epoch_acc
+            #    best_model_wts = copy.deepcopy(model.state_dict())
+            # if phase == 'val':
+              #  val_acc_history.append(epoch_acc)
+
+        print()
+
+    time_elapsed = time.time() - since
+    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    #print('Best val Acc: {:4f}'.format(best_acc))
+
+    # load best model weights
+    # model.load_state_dict(best_model_wts)
+    return model#, val_acc_history
+
+
+
 if __name__ == "__main__":
-    pass
-  
-model = conv_deconv()
+    model = create_model()
+    print("Model loaded!")
 
-iter=0
-iter_new=0
+    if torch.cuda.is_available(): #use gpu if available
+        model.cuda()
 
-if not os.path.exists("checkpoints"):
-    os.makedirs("checkpoints")
+    
+    criterion = nn.BCELoss() #Binary cross entropy loss 
+    learning_rate = 0.001
+    optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
-check=os.listdir("checkpoints") #checking if checkpoints exist to resume training
-if len(check):
-    check.sort(key=lambda x:int((x.split('_')[2]).split('.')[0]))
-    model=torch.load("checkpoints/"+check[-1])
-    iter=int(re.findall(r'\d+',check[-1])[0])
-    iter_new=iter
-    print("Resuming from iteration " + str(iter))
+    print("Training Started!")
 
-if torch.cuda.is_available(): #use gpu if available
-	model.cuda()
+    num_epochs = 1
+    train_loader, train_dataset = load_dataset("./data", "train")
+    val_loader, val_dataset = load_dataset("./data", "val")
 
-def train_conv_deconv(model,size,conv_feat=None,labels=None,epochs=1,optimizer=None,train=True,shuffle=True):
-    if train:
-        model.train()
-    else:
-        model.eval()
-        
-criterion = nn.MSELoss() #MSquaredLOSS
-learning_rate = 0.001
-optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
+    dataloaders = {}
+    dataloaders['train'] = train_loader
+    dataloaders['val'] = val_loader 
+    model, val_acc_history = train_model(model, dataloaders, criterion, optimizer, num_epochs=num_epochs)
 
-beg=time.time() #time at the beginning of training
-print("Training Started!")
-
-num_epochs = 5
-train_loader = load_dataset("./data", "train")
-
-
+"""
 for epoch in range(num_epochs):
     print("\nEPOCH " +str(epoch+1)+" of "+str(num_epochs)+"\n")
     for i, batch in enumerate(train_loader):
         inputs, labels = batch
-        print(inputs.shape)
-        print(labels.shape)
 
-        output = model(inputs)
-        print(output.shape)
-        exit()
-        # Regarder structure de batch -> input
-        # forward input dans le NN (output = model(input))
-        # Calcul de la loss ? (a definir) : (loss = compute_loss(output, GT))
-        # backward -> optimizer etc
+        optimizer.zero_grad()   
+        outputs = model(inputs)
 
-        """
-        datapoint['input_image']=datapoint['input_image'].type(torch.FloatTensor) #typecasting to FloatTensor as it is compatible with CUDA
-        datapoint['output_image']=datapoint['output_image'].type(torch.FloatTensor)
-        if torch.cuda.is_available(): #move to gpu if available
-                input_image = Variable(datapoint['input_image'].cuda()) #Converting a Torch Tensor to Autograd Variable
-                output_image = Variable(datapoint['output_image'].cuda())
-        else:
-                input_image = Variable(datapoint['input_image'])
-                output_image = Variable(datapoint['output_image'])
-
-        optimizer.zero_grad()  #https://discuss.pytorch.org/t/why-do-we-need-to-set-the-gradients-manually-to-zero-in-pytorch/4903/3
-        outputs = model(input_image)
-        loss = criterion(outputs, output_image)
+        loss = criterion(outputs, labels)
         loss.backward() #Backprop
         optimizer.step()    #Weight update
+        
         writer.add_scalar('Training Loss',loss.data[0]/10, iter)
         iter=iter+1
-        if iter % 10 == 0 or iter==1:
-            # Calculate Accuracy         
-            test_loss = 0
-            total = 0
-            # Iterate through test dataset
-            for j,datapoint_1 in enumerate(test_loader): #for testing
-                datapoint_1['input_image']=datapoint_1['input_image'].type(torch.FloatTensor)
-                datapoint_1['output_image']=datapoint_1['output_image'].type(torch.FloatTensor)
-           
-                if torch.cuda.is_available():
-                    input_image_1 = Variable(datapoint_1['input_image'].cuda())
-                    output_image_1 = Variable(datapoint_1['output_image'].cuda())
-                else:
-                    input_image_1 = Variable(datapoint_1['input_image'])
-                    output_image_1 = Variable(datapoint_1['output_image'])
-                
-                # Forward pass only to get logits/output
-                outputs = model(input_image_1)
-                test_loss += criterion(outputs, output_image_1).data[0]
-                total+=datapoint_1['output_image'].size(0)
-            test_loss=test_loss/total   #sum of test loss for all test cases/total cases
-            writer.add_scalar('Test Loss',test_loss, iter) 
-            # Print Loss
-            time_since_beg=(time.time()-beg)/60
-            print('Iteration: {}. Loss: {}. Test Loss: {}. Time(mins) {}'.format(iter, loss.data[0]/10, test_loss,time_since_beg))
-        if iter % 500 ==0:
-            torch.save(model,'checkpoints/model_iter_'+str(iter)+'.pt')
-            print("model saved at iteration : "+str(iter))
-    """
+        # Regarder structure de batch -> input
+        # forward input dans le NN (output = model(input))
+        
+        # backward -> optimizer etc
+"""
