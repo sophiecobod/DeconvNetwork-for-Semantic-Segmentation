@@ -8,8 +8,9 @@ from torchvision import transforms, utils
 from model import create_model 
 import time
 
+usegpu = False
 
-def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
+def train_model(model, dataloaders, criterion, optimizer, device, num_epochs=25):
     since = time.time()
 
     #val_acc_history = []
@@ -33,8 +34,9 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25):
 
             # Iterate over data.
             for inputs, labels in dataloaders[phase]:
-                #inputs = inputs.to(device)
-                #labels = labels.to(device)
+                if usegpu: #use gpu if available
+                    inputs = inputs.to(device)
+                    labels = labels.to(device)
 
                 # zero the parameter gradients
                 optimizer.zero_grad()
@@ -86,24 +88,30 @@ if __name__ == "__main__":
     model = create_model()
     print("Model loaded!")
 
-    if torch.cuda.is_available(): #use gpu if available
+    if usegpu: #use gpu if available
+        print("Using cuda")
         model.cuda()
-
     
     criterion = nn.BCELoss() #Binary cross entropy loss 
     learning_rate = 0.001
     optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
-    print("Training Started!")
-
     num_epochs = 1
     train_loader, train_dataset = load_dataset("./data", "train")
     val_loader, val_dataset = load_dataset("./data", "val")
-
+    
+    print("Dataset loaded!")
+    
     dataloaders = {}
     dataloaders['train'] = train_loader
-    dataloaders['val'] = val_loader 
-    model, val_acc_history = train_model(model, dataloaders, criterion, optimizer, num_epochs=num_epochs)
+    dataloaders['val'] = val_loader
+
+    print("Training Started!")
+    device = torch.device('cuda' if usegpu else 'cpu')
+    model = train_model(model, dataloaders, criterion, optimizer, device, num_epochs=num_epochs)
+
+    torch.save(model, "trained_model.pth")
+    
 
 """
 for epoch in range(num_epochs):

@@ -28,3 +28,6 @@ if __name__ == "__main__":
     print(len(train_dataset))
     print(train_dataset[5])
     print(type(train_dataset[5]))
+
+    print("nb batches:")
+    print(len(list(train_loader)))
