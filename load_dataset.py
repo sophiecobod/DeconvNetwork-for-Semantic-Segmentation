@@ -15,7 +15,7 @@ def load_dataset(datapath, dataset_choice):
     dataset = voc.VOCSegmentation(root=datapath, year='2012', image_set=dataset_choice,
                                                     download=True, transform = transform, target_transform=transform_label)
     
-    loader = torch.utils.data.DataLoader(dataset, batch_size=64,
+    loader = torch.utils.data.DataLoader(dataset, batch_size=32,
                                             shuffle=True, num_workers=2)
 
 

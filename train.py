@@ -7,8 +7,9 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from model import create_model 
 import time
+from torch.optim.lr_scheduler import StepLR
 
-usegpu = False
+usegpu = True
 
 def train_model(model, dataloaders, criterion, optimizer, device, num_epochs=25):
     since = time.time()
@@ -18,7 +19,10 @@ def train_model(model, dataloaders, criterion, optimizer, device, num_epochs=25)
     #best_model_wts = copy.deepcopy(model.state_dict())
     #best_acc = 0.0
 
+    scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
+    
     for epoch in range(num_epochs):
+        scheduler.step()
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
 
@@ -47,7 +51,7 @@ def train_model(model, dataloaders, criterion, optimizer, device, num_epochs=25)
                     outputs = model(inputs)
                     outputs = torch.clamp(outputs, 0, 1)
                     loss = criterion(outputs, labels)
-                    print(loss)
+                    #print(loss.item())
                     ## TODO _, preds = torch.max(outputs, 1)
 
                     # backward + optimize only if in training phase
@@ -59,6 +63,10 @@ def train_model(model, dataloaders, criterion, optimizer, device, num_epochs=25)
                 running_loss += loss.item() * inputs.size(0)
                 ## TODO running_corrects += torch.sum(preds == labels.data)
 
+                # remove tensor
+                del inputs
+                del labels
+                torch.cuda.empty_cache()
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             ## TODO epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
 
@@ -91,12 +99,12 @@ if __name__ == "__main__":
     if usegpu: #use gpu if available
         print("Using cuda")
         model.cuda()
-    
+
     criterion = nn.BCELoss() #Binary cross entropy loss 
     learning_rate = 0.001
     optimizer = torch.optim.Adam(model.parameters(),lr=learning_rate)
 
-    num_epochs = 1
+    num_epochs = 20
     train_loader, train_dataset = load_dataset("./data", "train")
     val_loader, val_dataset = load_dataset("./data", "val")
     
