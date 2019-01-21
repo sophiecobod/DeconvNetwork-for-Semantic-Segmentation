@@ -1,10 +1,12 @@
 import torch
-import model
+import model as m
 import load_dataset
-import matplotib.pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 
-model = torch.load("trained_model.pth")
+#model = torch.load("trained_model.pth")
+
+model = torch.load("trained_model_random.pth")
 model.eval()
 
 #loader, dataset = load_dataset.load_dataset("./data", "test")
@@ -15,22 +17,26 @@ mask_color = (255, 0, 0)
 
 
 def visualize_pred(seg):    
-    image = np.zeros((224,224,3), dtype=np.int8)
+    image = np.zeros((224,224,3), dtype=np.uint8)#create empty image
     for x in range(224):
         for y in range(224):
-            image[x,y] = seg[0][x][y]
+            res = seg[0][x][y].detach().numpy()
+            print(res)
+            if res < 0.5: # background
+                image[x,y] = background_color #fill it with background
+            else: # object detected
+                image[x,y] = mask_color 
     plt.imshow(image)
     plt.show()
 
 
 def forward_image(image, model):
     X = image.view(1, 3, 224, 224)
-    res = conv_model.forward(X)[0]
+    res = model.forward(X)[0]
     return res
     
 index = 0
 image, label = dataset[index]
-conv_model = model.create_model()
 
-res = test_image(image, conv_model)
+res = forward_image(image, model)
 visualize_pred(res)
